@@ -28,6 +28,7 @@ from recipes.models import (
     Tag
 )
 
+RECIPE_NOT_EXIST = 'Рецепта с id - {} не существует'
 
 class UserViewSet(BaseUserViewSet):
     """Класс для работы с пользователями."""
@@ -252,4 +253,4 @@ class RecipeViewSet(ModelViewSet):
                 'short-link': request.build_absolute_uri(
                     reverse('short-link', args=(pk,)))
             })
-        raise ValidationError(f'Рецепта с id - {pk} не существует')
+        raise ValidationError(RECIPE_NOT_EXIST.format(pk))
