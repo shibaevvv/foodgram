@@ -44,7 +44,7 @@ docker compose exec backend cp -r /app/collected_static/. /backend_static/static
 docker compose exec backend python manage.py migrate
 ```
 
-Для наполнения тестовыми данными (теги, ингердиенты) выполните загрузку:
+Для наполнения тестовыми данными (теги, ингредиенты) выполните загрузку:
 ```bash
 docker compose exec backend python manage.py load_data --wipe
 ```
@@ -53,7 +53,9 @@ docker compose exec backend python manage.py load_data --wipe
 
 #### Основные страницы
 По адресу http://localhost изучите фронтенд веб-приложения
+
 по адресу http://localhost/api/docs/ — спецификацию API
+
 Админка доступна тут http://localhost/admin/
 
 Для создания суперпользователя выполните:
