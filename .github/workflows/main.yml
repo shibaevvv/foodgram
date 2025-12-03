@@ -113,7 +113,7 @@ jobs:
         to: ${{ secrets.TELEGRAM_TO }}
         token: ${{ secrets.TELEGRAM_TOKEN }}
         message: |
-          Деплой успешно выполнен!  🫡
+          Деплой успешно выполнен! 🫡
 
           ${{ github.actor }} создал commit: ${{ github.event.commits[0].message }}
           Репозиторий: ${{ github.repository }}
