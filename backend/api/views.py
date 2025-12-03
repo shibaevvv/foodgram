@@ -233,10 +233,9 @@ class RecipeViewSet(ModelViewSet):
         )
         response = HttpResponse(
             'Список покупок:\n'
-            + '\n'.join(
-                '\u2022 '
-                f'{ingredient['ingredient__name']} - {ingredient['sum']} '
-                f'{ingredient['ingredient__measurement_unit']}'
+            '\n'.join(
+                f'\u2022 {ingredient["ingredient__name"]} {ingredient["sum"]}'
+                f' {ingredient["ingredient__measurement_unit"]}'
                 for ingredient in ingredients),
             content_type='text/plain; charset=utf-8',
         )
