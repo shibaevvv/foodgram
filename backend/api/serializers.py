@@ -12,8 +12,9 @@ from rest_framework.validators import UniqueTogetherValidator
 
 from recipes.admin import User
 from recipes.models import (
-    Ingredient, Favorite, Recipe, RecipeIngredient, ShoppingCart, Subscription,
-    Tag
+    MAX_COOKING_TIME, MAX_INGREDIENT_AMOUNT, MIN_COOKING_TIME,
+    MIN_INGREDIENT_AMOUNT, Ingredient, Favorite, Recipe, RecipeIngredient,
+    ShoppingCart, Subscription, Tag
 )
 
 REQUIRED_FIELD = 'Обязательное поле.'
@@ -21,7 +22,6 @@ NOT_EMPTY_FIELD = 'Поле не должно быть пустым!'
 ITEMS_NOT_REPEAT_ERROR = 'Значения не должны повторяться: {}'
 ITEMS_NOT_FOUND_ERROR = 'В списке доступных нет значения: {}!'
 INGREDIENTS_MIN_VALUE = 1
-COOKING_TIME_MIN_VALUE = 1
 
 
 class Base64ImageField(serializers.ImageField):
@@ -53,12 +53,12 @@ class UserSerializer(BaseUserSerializer):
     class Meta(BaseUserSerializer.Meta):
         fields = (*BaseUserSerializer.Meta.fields, 'is_subscribed', 'avatar',)
 
-    def get_is_subscribed(self, obj):
+    def get_is_subscribed(self, author):
         """Метод получения значения подписки на конкретного автора."""
         return (
             (user := self.context['request'].user)
             and user.is_authenticated
-            and user.subscribers.filter(author=obj).exists()
+            and user.user_subscriptions.filter(author=author).exists()
         )
 
 
@@ -208,7 +208,10 @@ class RecipeIngredientCreateSerializer(serializers.Serializer):
     id = serializers.PrimaryKeyRelatedField(
         queryset=Ingredient.objects.all(), source='ingredient'
     )
-    amount = serializers.IntegerField(min_value=INGREDIENTS_MIN_VALUE)
+    amount = serializers.IntegerField(
+        min_value=MIN_INGREDIENT_AMOUNT,
+        max_value=MAX_INGREDIENT_AMOUNT
+    )
 
 
 class RecipeCreateSerializer(serializers.ModelSerializer):
@@ -216,7 +219,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
     ingredients = RecipeIngredientCreateSerializer(many=True, required=True)
     image = Base64ImageField()
-    cooking_time = serializers.IntegerField(min_value=COOKING_TIME_MIN_VALUE)
+    cooking_time = serializers.IntegerField(
+        min_value=MIN_COOKING_TIME,
+        max_value=MAX_COOKING_TIME
+    )
 
     class Meta:
         model = Recipe

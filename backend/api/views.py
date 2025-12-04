@@ -65,7 +65,7 @@ class UserViewSet(BaseUserViewSet):
     )
     def subscriptions(self, request):
         """Показывает на каких авторов подписан пользователь."""
-        queryset = User.objects.filter(subscriptions__user=request.user)
+        queryset = User.objects.filter(author_subscriptions__user=request.user)
         paginated_queryset = self.paginate_queryset(queryset)
         serializer = SubscriptionsSerializer(
             paginated_queryset, context={'request': request}, many=True
