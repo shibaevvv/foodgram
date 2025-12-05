@@ -1,6 +1,6 @@
 from datetime import datetime
 from django.db.models import Sum
-from django.http import FileResponse, HttpResponse
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from djoser.views import UserViewSet as BaseUserViewSet
@@ -19,8 +19,7 @@ from api.pagination import LimitPageNumberPagination
 from api.permisions import IsOwnerOrReadOnly
 from api.serializers import (
     AuthorSerializer ,AvatarSerializer, IngredientSerializer,
-    FavoriteSerializer, RecipeReadSerializer, RecipeShortSerializer,
-    RecipeWriteSerializer, ShoppingCartSerializer, SubscribeSerializer,
+    RecipeReadSerializer, RecipeShortSerializer, RecipeWriteSerializer,
     TagSerializer
 )
 from recipes.admin import User
@@ -44,6 +43,9 @@ DECLENSIONS = {
     'кусок': ('кусок', 'кусков', 'куска'),
     'батон': ('батон', 'батонов', 'батона'),
 }
+
+SELF_SUBSCRIBE_ERROR = 'Подписка на самого себя запрещена!'
+ALREADY_SUBSCRIBED_ERROR = 'Подписка на этого автора оформлена ранее!'
 
 
 class UserViewSet(BaseUserViewSet):
@@ -98,13 +100,14 @@ class UserViewSet(BaseUserViewSet):
     def subscribe(self, request, id=None):
         """Метод для оформления подписки на автора."""
         author = get_object_or_404(User, id=id)
-        data = {'user': request.user.id, 'author': author.id}
-        serializer = SubscribeSerializer(
-            data=data,
-            context={'request': request}
+        if request.user == author:
+            raise ValidationError(SELF_SUBSCRIBE_ERROR)
+        _, created = Subscription.objects.get_or_create(
+            user=request.user, 
+            author=author
         )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        if not created:
+            raise ValidationError(ALREADY_SUBSCRIBED_ERROR)
         return Response(
             AuthorSerializer(
                 author,
@@ -155,6 +158,31 @@ class RecipeViewSet(ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+    @staticmethod
+    def base_add_favorite_shopping(request, model, pk):
+        """Базовый метод для добавления в избранное и корзину покупок."""
+        recipe = get_object_or_404(Recipe, id=pk)
+        _, created = model.objects.get_or_create(
+            user=request.user,
+            recipe=recipe
+        )
+        if not created:
+            raise ValidationError(
+                f'Рецепт уже есть в {model._meta.verbose_name_plural}!')
+        return Response(
+            RecipeShortSerializer(
+                recipe,
+                context={'request': request}
+            ).data,
+            status=status.HTTP_201_CREATED
+        )
+    
+    @staticmethod
+    def base_delete_favorite_shopping(request, model, pk):
+        """Базовый метод для удаления из избранного и корзины покупок."""
+        get_object_or_404(model, user=request.user, recipe=pk).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(
         detail=True,
         methods=['post'],
@@ -162,26 +190,12 @@ class RecipeViewSet(ModelViewSet):
     )
     def favorite(self, request, pk=None):
         """Метод для добавления рецепта в избранное."""
-        recipe = get_object_or_404(Recipe, id=pk)
-        data = {'user': request.user.id, 'recipe': recipe.pk}
-        serializer = FavoriteSerializer(
-            data=data,
-            context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(
-            RecipeShortSerializer(
-                self.get_object(),
-                context={'request': request}).data,
-            status=status.HTTP_201_CREATED
-        )
+        return self.base_add_favorite_shopping(request, Favorite, pk)
 
     @favorite.mapping.delete
     def remove_favorite(self, request, pk=None):
         """Метод для удаления рецепта из избранного."""
-        get_object_or_404(Favorite, user=request.user, recipe=pk).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return self.base_delete_favorite_shopping(request, Favorite, pk)
 
     @action(
         detail=True,
@@ -190,26 +204,12 @@ class RecipeViewSet(ModelViewSet):
     )
     def shopping_cart(self, request, pk=None):
         """Метод для добавления рецепта в корзину покупок."""
-        recipe = get_object_or_404(Recipe, id=pk)
-        data = {'user': request.user.id, 'recipe': recipe.pk}
-        serializer = ShoppingCartSerializer(
-            data=data,
-            context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(
-            RecipeShortSerializer(
-                self.get_object(),
-                context={'request': request}).data,
-            status=status.HTTP_201_CREATED
-        )
+        return self.base_add_favorite_shopping(request, ShoppingCart, pk)
 
     @shopping_cart.mapping.delete
     def remove_shopping_cart(self, request, pk=None):
         """Метод для удаления рецепта из корзины покупок."""
-        get_object_or_404(ShoppingCart, user=request.user, recipe=pk).delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return self.base_delete_favorite_shopping(request, ShoppingCart, pk)
     
     def inflect_with_num(self, number, forms):
         """Метод склонения слов в зависимости от числа."""
@@ -262,19 +262,19 @@ class RecipeViewSet(ModelViewSet):
     @action(detail=False, permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
         """Метод для скачивания корзины покупок."""
-        recipes = (
-            RecipeIngredient.objects.filter(
-                recipe__shoppingcarts__user=request.user)
-            .values(
-                'ingredient__name',
-                'ingredient__measurement_unit',
-                'recipe__name',
-                'recipe__author__username'
-            )
-            .annotate(sum=Sum('amount'))
-        )
         return FileResponse(
-            self.get_shopping_cart_text(recipes),
+            self.get_shopping_cart_text(
+                RecipeIngredient.objects.filter(
+                recipe__shoppingcarts__user=request.user
+                ).values(
+                    'ingredient__name',
+                    'ingredient__measurement_unit',
+                    'recipe__name',
+                    'recipe__author__username'
+                ).annotate(
+                    sum=Sum('amount')
+                )
+            ),
             'shopping_cart.txt'
         )
 

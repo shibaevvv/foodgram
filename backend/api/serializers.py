@@ -1,6 +1,3 @@
-import base64
-
-from django.core.files.base import ContentFile
 from django.db import transaction
 from djoser.serializers import (
     UserCreateSerializer as BaseUserCreateSerializer,
@@ -8,14 +5,11 @@ from djoser.serializers import (
 )
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-from rest_framework.validators import UniqueTogetherValidator
 
 from recipes.admin import User
 from recipes.models import (
     MAX_COOKING_TIME, MAX_INGREDIENT_AMOUNT, MIN_COOKING_TIME,
-    MIN_INGREDIENT_AMOUNT, Ingredient, Favorite, Recipe, RecipeIngredient,
-    ShoppingCart, Subscription, Tag
+    MIN_INGREDIENT_AMOUNT, Ingredient, Recipe, RecipeIngredient, Tag
 )
 
 REQUIRED_FIELD = 'Обязательное поле.'
@@ -112,28 +106,6 @@ class AuthorSerializer(UserSerializer):
             )],
             many=True
         ).data
-
-
-
-class SubscribeSerializer(serializers.ModelSerializer):
-    """Сериализатор подписок."""
-
-    class Meta():
-        model = Subscription
-        fields = '__all__'
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Subscription.objects.all(),
-                fields=('user', 'author'),
-                message='Подписка на этого автора оформлена ранее!'
-            )
-        ]
-
-    def validate_author(self, author):
-        """Метод валидации подписки самого на себя."""
-        if author == self.context['request'].user:
-            raise ValidationError('Подписка на самого себя запрещена!')
-        return author
 
 
 class RecipeIngredientReadSerializer(serializers.ModelSerializer):
@@ -291,34 +263,3 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     def to_representation(self, recipe):
         """Метод для выдачи сериализатора рецепта для чтения."""
         return RecipeReadSerializer(recipe, context=self.context).data
-
-
-class FavoriteSerializer(serializers.ModelSerializer):
-    """Работа с избранными рецептами."""
-
-    class Meta:
-        model = Favorite
-        fields = ('id', 'user', 'recipe',)
-
-        validators = [
-            UniqueTogetherValidator(
-                queryset=Favorite.objects.all(),
-                fields=('user', 'recipe'),
-                message='Рецепт уже добавлен в избранное.'
-            )
-        ]
-
-
-class ShoppingCartSerializer(serializers.ModelSerializer):
-    """Работа со списком покупок."""
-    class Meta:
-        model = ShoppingCart
-        fields = ('id', 'user', 'recipe',)
-
-        validators = [
-            UniqueTogetherValidator(
-                queryset=ShoppingCart.objects.all(),
-                fields=('user', 'recipe'),
-                message='Рецепт уже добавлен в список покупок.'
-            )
-        ]
