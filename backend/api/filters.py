@@ -4,7 +4,7 @@ from recipes.models import Ingredient, Recipe, Tag
 
 
 class IngredientFilter(filters.FilterSet):
-    """Фильтр для ингредиентов."""
+    """Фильтр для Продуктов."""
 
     name = filters.CharFilter(field_name='name', lookup_expr='istartswith')
 
