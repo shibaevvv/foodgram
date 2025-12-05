@@ -26,7 +26,7 @@ class User(AbstractUser):
         unique=True,
     )
     username = models.CharField(
-        'Логин',
+        'Никнейм',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
         validators=(UnicodeUsernameValidator(),),
