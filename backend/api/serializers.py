@@ -239,6 +239,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 ingredient=ingredient['ingredient'],
                 amount=ingredient['amount']
             ) for ingredient in ingredients)
+        return recipe
 
     def create(self, recipe_data):
         ingredients = recipe_data.pop('ingredients')
