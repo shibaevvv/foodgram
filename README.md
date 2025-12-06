@@ -110,6 +110,7 @@ echo 'DB_PORT=5432' >> .env
 echo 'SECRET_KEY=secret_key' >> .env
 echo 'DEBUG=False' >> .env
 echo 'ALLOWED_HOSTS=127.0.0.1,localhost' >> .env
+echo 'CSRF_TRUSTED_ORIGINS=https://mydomain.net' >> .env
 ```
 
 ## Автор
