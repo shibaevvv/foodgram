@@ -37,7 +37,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(
                 f'{total_objects} '
                 f'{self.model._meta.verbose_name_plural} '
-                f'успешно импортировано из {options['file_name']}'
+                f'успешно импортировано из {options["file_name"]}'
             ))
         except FileNotFoundError:
             raise CommandError(
