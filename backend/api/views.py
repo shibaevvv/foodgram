@@ -1,8 +1,6 @@
-from datetime import datetime
-
 from django.db.models import Sum
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from djoser.views import UserViewSet as BaseUserViewSet
 from django_filters.rest_framework import DjangoFilterBackend
@@ -23,32 +21,17 @@ from api.serializers import (
     RecipeReadSerializer, RecipeShortSerializer, RecipeWriteSerializer,
     TagSerializer
 )
+from api.shopping_cart import get_shopping_cart_text
 from recipes.admin import User
 from recipes.models import (
     Ingredient, Favorite, Recipe, RecipeIngredient, ShoppingCart, Subscription,
     Tag
 )
 
-RECIPE_NOT_EXIST = 'Рецепта с id - {} не существует'
-
-SHOPPING_CART_TITLE = (
-    f'Список покупок от {datetime.now().strftime("%d.%m.%Y")}.'
-)
-SHOPPING_CART_RECIPES = '   \u2022 {} (Автор - {})'
-SHOPPING_CART_PRODUCTS = '  {}. {}: {} ({})'
-DECLENSIONS = {
-    'капля': ('капля', 'капель', 'капли'),
-    'банка': ('банка', 'банок', 'банки'),
-    'стакан': ('стакан', 'стаканов', 'стакана'),
-    'щепотка': ('щепотка', 'щепоток', 'щепотки'),
-    'горсть': ('горсть', 'горстей', 'горсти'),
-    'веточка': ('веточка', 'веточек', 'веточки'),
-    'кусок': ('кусок', 'кусков', 'куска'),
-    'батон': ('батон', 'батонов', 'батона'),
-}
-
+RECIPE_NOT_EXIST = 'Рецепта с id - {} не существует!'
 SELF_SUBSCRIBE_ERROR = 'Подписка на самого себя запрещена!'
-ALREADY_SUBSCRIBED_ERROR = 'Подписка на этого автора оформлена ранее!'
+ALREADY_SUBSCRIBED_ERROR = 'Подписка на автора ({}) оформлена ранее!'
+RECIPE_EXISTS_IN_MODEL = 'Рецепт ({}) уже добавлен в {}!'
 
 
 class UserViewSet(BaseUserViewSet):
@@ -110,7 +93,9 @@ class UserViewSet(BaseUserViewSet):
             author=author
         )
         if not created:
-            raise ValidationError(ALREADY_SUBSCRIBED_ERROR)
+            raise ValidationError(
+                ALREADY_SUBSCRIBED_ERROR.format(author.username)
+            )
         return Response(
             AuthorSerializer(
                 author,
@@ -162,8 +147,7 @@ class RecipeViewSet(ModelViewSet):
         serializer.save(author=self.request.user)
 
     @staticmethod
-    def base_add_favorite_shopping(request, model, pk):
-        """Базовый метод для добавления в избранное и корзину покупок."""
+    def add_favorite_shopping(request, model, pk):
         recipe = get_object_or_404(Recipe, id=pk)
         _, created = model.objects.get_or_create(
             user=request.user,
@@ -171,7 +155,10 @@ class RecipeViewSet(ModelViewSet):
         )
         if not created:
             raise ValidationError(
-                f'Рецепт уже есть в {model._meta.verbose_name_plural}!')
+                RECIPE_EXISTS_IN_MODEL.format(
+                    recipe.name,
+                    model._meta.verbose_name)
+            )
         return Response(
             RecipeShortSerializer(
                 recipe,
@@ -181,8 +168,7 @@ class RecipeViewSet(ModelViewSet):
         )
 
     @staticmethod
-    def base_delete_favorite_shopping(request, model, pk):
-        """Базовый метод для удаления из избранного и корзины покупок."""
+    def delete_favorite_shopping(request, model, pk):
         get_object_or_404(model, user=request.user, recipe=pk).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -193,12 +179,12 @@ class RecipeViewSet(ModelViewSet):
     )
     def favorite(self, request, pk=None):
         """Метод для добавления рецепта в избранное."""
-        return self.base_add_favorite_shopping(request, Favorite, pk)
+        return self.add_favorite_shopping(request, Favorite, pk)
 
     @favorite.mapping.delete
     def remove_favorite(self, request, pk=None):
         """Метод для удаления рецепта из избранного."""
-        return self.base_delete_favorite_shopping(request, Favorite, pk)
+        return self.delete_favorite_shopping(request, Favorite, pk)
 
     @action(
         detail=True,
@@ -207,66 +193,18 @@ class RecipeViewSet(ModelViewSet):
     )
     def shopping_cart(self, request, pk=None):
         """Метод для добавления рецепта в корзину покупок."""
-        return self.base_add_favorite_shopping(request, ShoppingCart, pk)
+        return self.add_favorite_shopping(request, ShoppingCart, pk)
 
     @shopping_cart.mapping.delete
     def remove_shopping_cart(self, request, pk=None):
         """Метод для удаления рецепта из корзины покупок."""
-        return self.base_delete_favorite_shopping(request, ShoppingCart, pk)
-
-    def inflect_with_num(self, number, forms):
-        """Метод склонения слов в зависимости от числа."""
-        if not isinstance(forms, tuple):
-            return forms
-        units = number % 10
-        tens = number % 100 - units
-        if tens == 10 or units >= 5 or units == 0:
-            needed_form = 1
-        elif units > 1:
-            needed_form = 2
-        else:
-            needed_form = 0
-        return forms[needed_form]
-
-    def get_shopping_cart_text(self, recipes):
-        """Метод для формирования текса скачиваемой корзины покупок."""
-        return '\n'.join([
-            SHOPPING_CART_TITLE,
-            '-' * len(SHOPPING_CART_TITLE),
-            '',
-            'Для приготовления следующих рецептов:',
-            '',
-            *{SHOPPING_CART_RECIPES.format(
-                recipe['recipe__name'].capitalize(),
-                recipe['recipe__author__username'],
-            ) for recipe in recipes},
-            '',
-            'Понадобятся следующие продукты:'
-            '',
-            '',
-            *[SHOPPING_CART_PRODUCTS.format(
-                count,
-                ingredient['ingredient__name'].capitalize(),
-                ingredient['sum'],
-                self.inflect_with_num(
-                    ingredient['sum'],
-                    DECLENSIONS.get(
-                        ingredient['ingredient__measurement_unit'],
-                        ingredient['ingredient__measurement_unit']
-                    )
-                ),
-                ingredient['ingredient__measurement_unit']
-            ) for count, ingredient in enumerate(recipes, 1)],
-            '',
-            '',
-            f'Загружено с сайта: {self.request.get_host()}'
-        ])
+        return self.delete_favorite_shopping(request, ShoppingCart, pk)
 
     @action(detail=False, permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
         """Метод для скачивания корзины покупок."""
         return FileResponse(
-            self.get_shopping_cart_text(
+            get_shopping_cart_text(
                 RecipeIngredient.objects.filter(
                     recipe__shoppingcarts__user=request.user
                 ).values(
@@ -276,7 +214,8 @@ class RecipeViewSet(ModelViewSet):
                     'recipe__author__username'
                 ).annotate(
                     sum=Sum('amount')
-                )
+                ),
+                self.request.get_host()
             ),
             'shopping_cart.txt'
         )
@@ -289,4 +228,12 @@ class RecipeViewSet(ModelViewSet):
                 'short-link': request.build_absolute_uri(
                     reverse('short-link', args=(pk,)))
             })
+        raise ValidationError(RECIPE_NOT_EXIST.format(pk))
+
+
+def recipe_redirect(request, pk):
+    try:
+        Recipe.objects.filter(pk=pk).exists()
+        return redirect(f'/recipes/{pk}/')
+    except Exception:
         raise ValidationError(RECIPE_NOT_EXIST.format(pk))
