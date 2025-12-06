@@ -32,7 +32,7 @@ from recipes.models import (
 RECIPE_NOT_EXIST = 'Рецепта с id - {} не существует'
 
 SHOPPING_CART_TITLE = (
-    f'Список покупок от {datetime.now().strftime('%d.%m.%Y')}.'
+    f'Список покупок от {datetime.now().strftime("%d.%m.%Y")}.'
 )
 SHOPPING_CART_RECIPES = '   \u2022 {} (Автор - {})'
 SHOPPING_CART_PRODUCTS = '  {}. {}: {} ({})'
