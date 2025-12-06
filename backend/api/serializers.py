@@ -8,8 +8,8 @@ from rest_framework import serializers
 
 from recipes.admin import User
 from recipes.models import (
-    MIN_COOKING_TIME, MIN_INGREDIENT_AMOUNT, Ingredient, Recipe,
-    RecipeIngredient, Tag
+    MIN_COOKING_TIME, MIN_INGREDIENT_AMOUNT, Favorite, Ingredient, Recipe,
+    RecipeIngredient, ShoppingCart, Subscription, Tag
 )
 
 REQUIRED_FIELD = 'Обязательное поле.'
@@ -41,7 +41,10 @@ class UserSerializer(BaseUserSerializer):
         return (
             (user := self.context['request'].user)
             and user.is_authenticated
-            and user.user_subscriptions.filter(author=author).exists()
+            and Subscription.objects.filter(
+                user=user,
+                author=author
+            ).exists()
         )
 
 
@@ -120,7 +123,7 @@ class RecipeIngredientReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = RecipeIngredient
         fields = ('id', 'name', 'measurement_unit', 'amount',)
-        read_only_fields = ('amount',)
+        read_only_fields = fields
 
 
 class RecipeReadSerializer(serializers.ModelSerializer):
@@ -149,21 +152,21 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
-    def get_user_related_fields(self, recipe, related_name):
+    def get_user_related_fields(self, recipe, model):
         """Метод для проверки существования связанной записи."""
         return (
             (user := self.context['request'].user)
             and user.is_authenticated
-            and getattr(user, related_name).filter(recipe=recipe).exists()
+            and model.objects.filter(user=user, recipe=recipe).exists()
         )
 
     def get_is_favorited(self, recipe):
         """Метод для определения в избранном ли рецепт."""
-        return self.get_user_related_fields(recipe, 'favorites')
+        return self.get_user_related_fields(recipe, Favorite)
 
     def get_is_in_shopping_cart(self, recipe):
         """Метод для определения в корзине покупок ли рецепт."""
-        return self.get_user_related_fields(recipe, 'shoppingcarts')
+        return self.get_user_related_fields(recipe, ShoppingCart)
 
 
 class RecipeIngredientCreateSerializer(serializers.Serializer):
@@ -206,9 +209,9 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def unique_validate(self, items):
         """Метод проверки уникальности передаваемых значений."""
-        if repeats := [item.name for item in items if items.count(item) > 1]:
+        if repeats := {item.name for item in items if items.count(item) > 1}:
             raise serializers.ValidationError(
-                ITEMS_NOT_REPEAT_ERROR.format(', '.join(set(repeats)))
+                ITEMS_NOT_REPEAT_ERROR.format(repeats)  
             )
 
     def validate_ingredients(self, recipe_ingredient_data):
@@ -236,7 +239,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
                 ingredient=ingredient['ingredient'],
                 amount=ingredient['amount']
             ) for ingredient in ingredients)
-        return recipe
 
     def create(self, recipe_data):
         ingredients = recipe_data.pop('ingredients')
