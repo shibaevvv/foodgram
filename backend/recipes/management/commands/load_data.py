@@ -1,86 +1,49 @@
-import csv
+import json
 import os
-from collections import Counter
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
-from django.db import IntegrityError, transaction
+from django.core.management.base import BaseCommand, CommandError
 
 from recipes.models import Ingredient, Tag
 
-CSV_DIR = os.path.join(settings.BASE_DIR, 'data')
+DATA_ROOT = os.path.join(settings.BASE_DIR, 'data')
 
-MODEL_CSV = {
-    Ingredient: 'ingredients.csv',
-    Tag: 'tags.csv',
+MODELS = {
+    'ingredients.json': Ingredient,
+    'tags.json': Tag
 }
-
-FK_FIELDS = {
-    # 'author': User,
-}
-
-
-def _convert_fk(row: dict) -> dict:
-    """Replace raw FK id → model instance."""
-    for key, model in FK_FIELDS.items():
-        if key in row:
-            row[key] = model.objects.get(pk=row[key])
-    return row
 
 
 class Command(BaseCommand):
-    help = 'Import initial data from CSV files located in /data/'
+    help = 'Load data from a JSON file.'
+    model = None
 
     def add_arguments(self, parser):
-        parser.add_argument(
-            '--wipe',
-            action='store_true',
-            help='Delete existing data before import',
-        )
+        parser.add_argument('file_name', type=str, help='Имя JSON файла')
 
     def handle(self, *args, **options):
-        wipe = options['wipe']
-        stats = Counter(created=0, skipped=0, errors=0)
-        self.stdout.write(self.style.SUCCESS('🚀  Start CSV import'))
-
-        for model, file_name in MODEL_CSV.items():
-            path = os.path.join(CSV_DIR, file_name)
-            if not os.path.exists(path):
-                self.stdout.write(
-                    self.style.WARNING(f'⏭  {file_name} not found – skipped')
+        self.model = MODELS[options['file_name']]
+        try:
+            with open(
+                os.path.join(DATA_ROOT, options['file_name']),
+                'r',
+                encoding='utf-8'
+            ) as file:
+                objects = self.model.objects.bulk_create(
+                    (self.model(**item) for item in json.load(file)),
+                    ignore_conflicts=True
                 )
-                continue
-
-            if wipe:
-                with transaction.atomic():
-                    model.objects.all().delete()
-                self.stdout.write(
-                    self.style.WARNING(f'🗑  {model.__name__} table wiped')
-                )
-
-            self.stdout.write(f'📄  Loading {file_name} …')
-            with open(path, newline='', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row_num, row in enumerate(reader, start=1):
-                    try:
-                        with transaction.atomic():
-                            row = _convert_fk(row)
-                            _, created = model.objects.get_or_create(
-                                id=row_num,
-                                defaults=row,
-                            )
-                            stats['created' if created else 'skipped'] += 1
-                    except (model.DoesNotExist, IntegrityError) as exc:
-                        stats['errors'] += 1
-                        self.stdout.write(
-                            self.style.ERROR(
-                                f'❌  Row {row_num} in {file_name}: {exc}'
-                            )
-                        )
-
-        self.stdout.write(
-            self.style.SUCCESS(
-                f'\n✅  Finished: created={stats["created"]}, '
-                f'skipped={stats["skipped"]}, errors={stats["errors"]}'
+            total_objects = len(objects)
+            self.stdout.write(self.style.SUCCESS(
+                f'{total_objects} '
+                f'{self.model._meta.verbose_name_plural} '
+                f'успешно импортировано из {options['file_name']}'
+            ))
+        except FileNotFoundError:
+            raise CommandError(
+                'Указанный файл должен находиться в директории {DATA_ROOT}.'
             )
-        )
+        except Exception as error:
+            raise CommandError(
+                f'Ошибка импорта {options['file_name']}: {error}'
+            )
