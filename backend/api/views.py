@@ -233,10 +233,10 @@ class RecipeViewSet(ModelViewSet):
             '',
             'Для приготовления следующих рецептов:',
             '',
-            *[SHOPPING_CART_RECIPES.format(
-                recipe['recipe__name'],
+            *{SHOPPING_CART_RECIPES.format(
+                recipe['recipe__name'].capitalize(),
                 recipe['recipe__author__username'],
-            ) for recipe in recipes],
+            ) for recipe in recipes},
             '',
             'Понадобятся следующие продукты:'
             '',
