@@ -45,5 +45,5 @@ class Command(BaseCommand):
             )
         except Exception as error:
             raise CommandError(
-                f'Ошибка импорта {options['file_name']}: {error}'
+                f'Ошибка импорта {options["file_name"]}: {error}'
             )
