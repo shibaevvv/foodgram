@@ -1,6 +1,6 @@
 from django.db.models import Sum
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from djoser.views import UserViewSet as BaseUserViewSet
 from django_filters.rest_framework import DjangoFilterBackend
@@ -228,4 +228,12 @@ class RecipeViewSet(ModelViewSet):
                 'short-link': request.build_absolute_uri(
                     reverse('short-link', args=(pk,)))
             })
+        raise ValidationError(RECIPE_NOT_EXIST.format(pk))
+
+
+def recipe_redirect(request, pk):
+    try:
+        Recipe.objects.filter(pk=pk).exists()
+        return redirect(f'/recipes/{pk}/')
+    except Exception:
         raise ValidationError(RECIPE_NOT_EXIST.format(pk))
