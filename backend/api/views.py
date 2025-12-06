@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from django.db.models import Sum
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
@@ -18,7 +19,7 @@ from api.filters import IngredientFilter, RecipeFilter
 from api.pagination import LimitPageNumberPagination
 from api.permisions import IsOwnerOrReadOnly
 from api.serializers import (
-    AuthorSerializer ,AvatarSerializer, IngredientSerializer,
+    AuthorSerializer, AvatarSerializer, IngredientSerializer,
     RecipeReadSerializer, RecipeShortSerializer, RecipeWriteSerializer,
     TagSerializer
 )
@@ -30,7 +31,9 @@ from recipes.models import (
 
 RECIPE_NOT_EXIST = 'Рецепта с id - {} не существует'
 
-SHOPPING_CART_TITLE = f'Список покупок от {datetime.now().strftime('%d.%m.%Y')}.'
+SHOPPING_CART_TITLE = (
+    f'Список покупок от {datetime.now().strftime('%d.%m.%Y')}.'
+)
 SHOPPING_CART_RECIPES = '   \u2022 {} (Автор - {})'
 SHOPPING_CART_PRODUCTS = '  {}. {}: {} ({})'
 DECLENSIONS = {
@@ -103,7 +106,7 @@ class UserViewSet(BaseUserViewSet):
         if request.user == author:
             raise ValidationError(SELF_SUBSCRIBE_ERROR)
         _, created = Subscription.objects.get_or_create(
-            user=request.user, 
+            user=request.user,
             author=author
         )
         if not created:
@@ -176,7 +179,7 @@ class RecipeViewSet(ModelViewSet):
             ).data,
             status=status.HTTP_201_CREATED
         )
-    
+
     @staticmethod
     def base_delete_favorite_shopping(request, model, pk):
         """Базовый метод для удаления из избранного и корзины покупок."""
@@ -210,7 +213,7 @@ class RecipeViewSet(ModelViewSet):
     def remove_shopping_cart(self, request, pk=None):
         """Метод для удаления рецепта из корзины покупок."""
         return self.base_delete_favorite_shopping(request, ShoppingCart, pk)
-    
+
     def inflect_with_num(self, number, forms):
         """Метод склонения слов в зависимости от числа."""
         if not isinstance(forms, tuple):
@@ -265,7 +268,7 @@ class RecipeViewSet(ModelViewSet):
         return FileResponse(
             self.get_shopping_cart_text(
                 RecipeIngredient.objects.filter(
-                recipe__shoppingcarts__user=request.user
+                    recipe__shoppingcarts__user=request.user
                 ).values(
                     'ingredient__name',
                     'ingredient__measurement_unit',

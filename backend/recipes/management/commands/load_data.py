@@ -9,9 +9,10 @@ from recipes.models import Ingredient, Tag
 DATA_ROOT = os.path.join(settings.BASE_DIR, 'data')
 
 MODELS = {
-        'ingredients.json': Ingredient,
-        'tags.json': Tag
-    }
+    'ingredients.json': Ingredient,
+    'tags.json': Tag
+}
+
 
 class Command(BaseCommand):
     help = 'Load data from a JSON file.'

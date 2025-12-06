@@ -99,10 +99,10 @@ class AuthorSerializer(UserSerializer):
         read_only_fields = fields
 
     def get_recipes(self, user):
-        """Метод получения рецептов с возможностью ограничить по количеству."""    
+        """Метод получения рецептов с возможностью ограничить по количеству."""
         return RecipeShortSerializer(
             user.recipes.all()[:int(
-                self.context['request'].GET.get('recipes_limit',10**10)
+                self.context['request'].GET.get('recipes_limit', 10**10)
             )],
             many=True
         ).data
@@ -208,7 +208,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
 
     def unique_validate(self, items):
         """Метод проверки уникальности передаваемых значений."""
-        if repeats := [item.name for item in items if items.count(item) > 1]: 
+        if repeats := [item.name for item in items if items.count(item) > 1]:
             raise serializers.ValidationError(
                 ITEMS_NOT_REPEAT_ERROR.format(', '.join(set(repeats)))
             )

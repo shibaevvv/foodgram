@@ -18,7 +18,7 @@ class RecipesCountMixin:
     @admin.display(description='Рецептов')
     def recipes_count(self, model):
         return model.recipes.count()
-    
+
 
 class BaseListFilter(admin.SimpleListFilter):
     """Базовый класс для фильтров."""
@@ -126,19 +126,19 @@ class UserAdmin(BaseUserAdmin, RecipesCountMixin):
     def full_name(self, user):
         """Метод для вычисления ФИО."""
         return f'{user.first_name} {user.last_name}'
-    
+
     @admin.display(description='Аватар')
     @mark_safe
     def avatar_thumbnail(self, user):
         """Метод для вычисления кода аватара."""
         if user.avatar:
             return f'<img src="{user.avatar.url}" width="35" height="35" />'
-    
+
     @admin.display(description='Подписок')
     def user_subscriptions_count(self, user):
         """Метод для вычисления подписок."""
         return user.user_subscriptions.count()
-    
+
     @admin.display(description='Подписчиков')
     def author_subscriptions_count(self, user):
         """Метод для вычисления подписчиков."""
@@ -184,8 +184,16 @@ class IngredientInline(admin.TabularInline):
 class RecipeAdmin(admin.ModelAdmin):
     """Админ класс для управления рецептами."""
 
-    list_display = ('id', 'name', 'cooking_time', 'author',
-        'favorites_amount', 'ingredients_list', 'tags_list', 'image_thumbnail')
+    list_display = (
+        'id',
+        'name',
+        'cooking_time',
+        'author',
+        'favorites_amount',
+        'ingredients_list',
+        'tags_list',
+        'image_thumbnail'
+    )
     list_select_related = ('author',)
     search_fields = (
         'name',
@@ -202,7 +210,7 @@ class RecipeAdmin(admin.ModelAdmin):
     def favorites_amount(self, recipe):
         """Метод для подсчета количества подписок на рецепт."""
         return recipe.favorites.count()
-    
+
     @admin.display(description='Картинка')
     @mark_safe
     def image_thumbnail(self, recipe):
