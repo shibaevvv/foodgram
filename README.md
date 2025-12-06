@@ -15,6 +15,7 @@
   - React
   - Docker
   - PostgreSQL
+  - SQLite
   - Nginx
   - Gunicorn
   - GitHub actions
@@ -73,17 +74,26 @@ echo 'SQLITE=True' >> .env
 Для запуска необходим установленный Python (рабочая версия 3.12.7)
 
 После клонирования перейдите в каталог backend.
-Создайте и активируйте виртуальное окружение.
-Обновите pip и установити зависимости:
+
 ```bash
 cd foodgram/backend
+```
+
+Создайте и активируйте виртуальное окружение.
+
+```bash
 python -m venv venv
 source venv/Scripts/activate
+```
+
+Обновите pip и установити зависимости:
+
+```bash
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-Выполните миграции, загрузку данных тестовых (если необходимо) и запуск сервера:
+Выполните миграции, загрузку тестовых данных (если необходимо) и запуск сервера:
 ```bash
 python manage.py migrate
 python manage.py load_data ingredients.json
@@ -92,9 +102,9 @@ python manage.py runserver
 ```
 #### Основные страницы при локальном запуске только бэкенд части
 
-- По адресу [127.0.0.1:8000](http://127.0.0.1:8000) изучите веб-приложения
+- По адресу [localhost:8000](http://localhost:8000) изучите веб-приложения
 
-- Админка доступна тут [127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
+- Админка доступна тут [localhost:8000/admin/](http://localhost:8000/admin/)
 
 
 ## Описание .env
