@@ -1,6 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MinValueValidator
 from django.db import models
 
 EMAIL_MAX_LENGTH = 254
@@ -10,9 +10,7 @@ LAST_NAME_MAX_LENGHT = 150
 TAG_MAX_LENGHT = 32
 RECIPE_NAME_MAX_LENGTH = 256
 MIN_COOKING_TIME = 1
-MAX_COOKING_TIME = 2147483647
 MIN_INGREDIENT_AMOUNT = 1
-MAX_INGREDIENT_AMOUNT = 2147483647
 INGREDIENT_NAME_MAX_LENGHT = 128
 MEASUREMENT_UNIT_MAX_LENGHT = 64
 
@@ -167,7 +165,6 @@ class Recipe(models.Model):
         blank=False,
         validators=[
             MinValueValidator(MIN_COOKING_TIME),
-            MaxValueValidator(MAX_COOKING_TIME),
         ]
     )
     author = models.ForeignKey(
@@ -209,7 +206,6 @@ class RecipeIngredient(models.Model):
         'Количество',
         validators=[
             MinValueValidator(MIN_INGREDIENT_AMOUNT),
-            MaxValueValidator(MAX_INGREDIENT_AMOUNT),
         ]
     )
 

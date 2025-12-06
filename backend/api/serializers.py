@@ -8,8 +8,8 @@ from rest_framework import serializers
 
 from recipes.admin import User
 from recipes.models import (
-    MAX_COOKING_TIME, MAX_INGREDIENT_AMOUNT, MIN_COOKING_TIME,
-    MIN_INGREDIENT_AMOUNT, Ingredient, Recipe, RecipeIngredient, Tag
+    MIN_COOKING_TIME, MIN_INGREDIENT_AMOUNT, Ingredient, Recipe,
+    RecipeIngredient, Tag
 )
 
 REQUIRED_FIELD = 'Обязательное поле.'
@@ -174,7 +174,6 @@ class RecipeIngredientCreateSerializer(serializers.Serializer):
     )
     amount = serializers.IntegerField(
         min_value=MIN_INGREDIENT_AMOUNT,
-        max_value=MAX_INGREDIENT_AMOUNT
     )
 
 
@@ -185,7 +184,6 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
     image = Base64ImageField()
     cooking_time = serializers.IntegerField(
         min_value=MIN_COOKING_TIME,
-        max_value=MAX_COOKING_TIME
     )
 
     class Meta:

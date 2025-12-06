@@ -15,6 +15,8 @@ admin.site.empty_value_display = 'Не задано'
 class RecipesCountMixin:
     """Миксин для определения количества рецептов объекта."""
 
+    list_display = ('recipes_count',)
+
     @admin.display(description='Рецептов')
     def recipes_count(self, model):
         return model.recipes.count()
@@ -23,8 +25,10 @@ class RecipesCountMixin:
 class BaseListFilter(admin.SimpleListFilter):
     """Базовый класс для фильтров."""
 
+    LOOKUPS = [(1, 'Да'), (0, 'Нет')]
+
     def lookups(self, request, model_admin):
-        return [(1, 'Да'), (0, 'Нет')]
+        return self.LOOKUPS
 
     def queryset(self, request, queryset):
         if self.value() == '1':
@@ -58,7 +62,7 @@ class HasAuthorSubscriptionsFilter(BaseListFilter):
 class CookingTimeFilter(admin.SimpleListFilter):
     """Фильтр по времени готовки рецепта."""
 
-    title = 'Время (мин)'
+    title = 'Время готовки (мин)'
     parameter_name = 'cooking_time'
 
     def lookups(self, request, model_admin):
@@ -73,28 +77,26 @@ class CookingTimeFilter(admin.SimpleListFilter):
         if (count := len(cooking_times)) < 3:
             return []
         self.max_fast_limit = cooking_times[count // 3]
-        self.min_slow_limit = cooking_times[count // 3 * 2]
+        self.min_long_limit = cooking_times[count // 3 * 2]
+        self.cooking_time_ranges = {
+            'fast': (cooking_times[0], self.max_fast_limit - 1),
+            'middle': (self.max_fast_limit, self.min_long_limit),
+            'long': (self.min_long_limit + 1, cooking_times[-1])
+        }
         return [
             ('fast', f'< {self.max_fast_limit} мин.'),
-            ('middle', f'{self.max_fast_limit} - {self.min_slow_limit} мин.'),
-            ('long', f'> {self.min_slow_limit} мин.'),
+            ('middle', f'{self.max_fast_limit} - {self.min_long_limit} мин.'),
+            ('long', f'> {self.min_long_limit} мин.'),
         ]
 
-    def queryset(self, request, queryset):
-        if self.value() == 'fast':
-            return queryset.filter(
-                **{f'{self.parameter_name}__lt': self.max_fast_limit}
+    def queryset(self, requerest, recipes):
+        if (range_name := self.value()):
+            return recipes.filter(
+                **{f'{self.parameter_name}__range':
+                   self.cooking_time_ranges[range_name]
+                }
             )
-        elif self.value() == 'middle':
-            return queryset.filter(
-                **{f'{self.parameter_name}__range': (
-                    self.max_fast_limit, self.min_slow_limit
-                )}
-            )
-        elif self.value() == 'long':
-            return queryset.filter(
-                **{f'{self.parameter_name}__gt': self.min_slow_limit}
-            )
+        return recipes
 
 
 @admin.register(User)
@@ -109,7 +111,7 @@ class UserAdmin(BaseUserAdmin, RecipesCountMixin):
         'email',
         'avatar_thumbnail',
         'is_staff',
-        'recipes_count',
+        *RecipesCountMixin.list_display,
         'user_subscriptions_count',
         'author_subscriptions_count'
     )
@@ -124,19 +126,16 @@ class UserAdmin(BaseUserAdmin, RecipesCountMixin):
 
     @admin.display(description='ФИО')
     def full_name(self, user):
-        """Метод для вычисления ФИО."""
         return f'{user.first_name} {user.last_name}'
 
     @admin.display(description='Аватар')
     @mark_safe
     def avatar_thumbnail(self, user):
-        """Метод для вычисления кода аватара."""
         if user.avatar:
             return f'<img src="{user.avatar.url}" width="35" height="35" />'
 
     @admin.display(description='Подписок')
     def user_subscriptions_count(self, user):
-        """Метод для вычисления подписок."""
         return user.user_subscriptions.count()
 
     @admin.display(description='Подписчиков')
@@ -149,7 +148,7 @@ class UserAdmin(BaseUserAdmin, RecipesCountMixin):
 class TagAdmin(admin.ModelAdmin, RecipesCountMixin):
     """Админ класс для управления тегами."""
 
-    list_display = ('id', 'name', 'slug', 'recipes_count',)
+    list_display = ('id', 'name', 'slug', *RecipesCountMixin.list_display,)
     search_fields = ('name', 'slug',)
 
 
@@ -157,9 +156,14 @@ class TagAdmin(admin.ModelAdmin, RecipesCountMixin):
 class IngredientAdmin(admin.ModelAdmin, RecipesCountMixin):
     """Админ класс для управления продуктами."""
 
-    list_display = ('id', 'name', 'measurement_unit', 'recipes_count',)
-    search_fields = ('name', 'measurement_unit', )
-    list_filter = (HasRecipesFilter, )
+    list_display = (
+        'id',
+        'name',
+        'measurement_unit',
+        *RecipesCountMixin.list_display,
+    )
+    search_fields = ('name', 'measurement_unit',)
+    list_filter = (HasRecipesFilter, 'measurement_unit',)
 
 
 class TagsInline(admin.TabularInline):
@@ -208,7 +212,6 @@ class RecipeAdmin(admin.ModelAdmin):
 
     @admin.display(description='В избранном',)
     def favorites_amount(self, recipe):
-        """Метод для подсчета количества подписок на рецепт."""
         return recipe.favorites.count()
 
     @admin.display(description='Картинка')
@@ -219,12 +222,12 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description='Тэги')
     @mark_safe
     def tags_list(self, recipe):
-        return ', '.join(tag.name for tag in recipe.tags.all())
+        return '<br>'.join(tag.name for tag in recipe.tags.all())
 
     @admin.display(description='Продукты')
     @mark_safe
     def ingredients_list(self, recipe):
-        return ', '.join(
+        return '<br>'.join(
             f'{ingredient.ingredient.name} - {ingredient.amount}'
             f' {ingredient.ingredient.measurement_unit}'
             for ingredient in recipe.recipe_ingredients.all()
@@ -232,7 +235,7 @@ class RecipeAdmin(admin.ModelAdmin):
 
 
 @admin.register(Favorite, ShoppingCart)
-class FavoriteShoppingCartBaseAdmin(admin.ModelAdmin):
+class FavoriteShoppingCartAdmin(admin.ModelAdmin):
     """Админ класс для управления избранным и корзиной покупок."""
 
     list_display = ('user', 'recipe',)
