@@ -93,8 +93,7 @@ class CookingTimeFilter(admin.SimpleListFilter):
         if (range_name := self.value()):
             return recipes.filter(
                 **{f'{self.parameter_name}__range':
-                   self.cooking_time_ranges[range_name]
-                }
+                   self.cooking_time_ranges[range_name]}
             )
         return recipes
 

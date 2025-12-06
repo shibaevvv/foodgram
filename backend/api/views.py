@@ -158,7 +158,7 @@ class RecipeViewSet(ModelViewSet):
                 RECIPE_EXISTS_IN_MODEL.format(
                     recipe.name,
                     model._meta.verbose_name)
-                )
+            )
         return Response(
             RecipeShortSerializer(
                 recipe,

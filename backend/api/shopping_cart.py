@@ -6,6 +6,7 @@ SHOPPING_CART_TITLE = (
 SHOPPING_CART_RECIPES = '   \u2022 {} (Автор - {})'
 SHOPPING_CART_PRODUCTS = '  {}. {} - {} ({})'
 
+
 def get_shopping_cart_text(recipes, domain):
     """Метод для формирования текса скачиваемой корзины покупок."""
     return '\n'.join([

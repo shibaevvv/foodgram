@@ -211,7 +211,7 @@ class RecipeWriteSerializer(serializers.ModelSerializer):
         """Метод проверки уникальности передаваемых значений."""
         if repeats := {item.name for item in items if items.count(item) > 1}:
             raise serializers.ValidationError(
-                ITEMS_NOT_REPEAT_ERROR.format(repeats)  
+                ITEMS_NOT_REPEAT_ERROR.format(repeats)
             )
 
     def validate_ingredients(self, recipe_ingredient_data):
