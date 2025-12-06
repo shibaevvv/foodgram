@@ -265,4 +265,4 @@ class ShoppingCart(UserRecipeBaseModel):
 
     class Meta(UserRecipeBaseModel.Meta):
         verbose_name = 'список покупок'
-        verbose_name_plural = 'Списоки покупок'
+        verbose_name_plural = 'Списки покупок'
