@@ -39,10 +39,6 @@ class Command(BaseCommand):
                 f'{self.model._meta.verbose_name_plural} '
                 f'успешно импортировано из {options["file_name"]}'
             ))
-        except FileNotFoundError:
-            raise CommandError(
-                'Указанный файл должен находиться в директории {DATA_ROOT}.'
-            )
         except Exception as error:
             raise CommandError(
                 f'Ошибка импорта {options["file_name"]}: {error}'
