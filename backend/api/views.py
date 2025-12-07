@@ -1,6 +1,6 @@
 from django.db.models import Sum
 from django.http import FileResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from djoser.views import UserViewSet as BaseUserViewSet
 from django_filters.rest_framework import DjangoFilterBackend
@@ -208,13 +208,15 @@ class RecipeViewSet(ModelViewSet):
                 RecipeIngredient.objects.filter(
                     recipe__shoppingcarts__user=request.user
                 ).values(
-                    'ingredient__name',
-                    'ingredient__measurement_unit',
-                    'recipe__name',
-                    'recipe__author__username'
+                    'ingredient__name', 'ingredient__measurement_unit'
                 ).annotate(
                     sum=Sum('amount')
-                ),
+                ).order_by('ingredient__name'),
+                ShoppingCart.objects.filter(
+                    user=request.user
+                ).values(
+                    'recipe__name', 'recipe__author__username'
+                ).order_by('recipe__name'),
                 self.request.get_host()
             ),
             'shopping_cart.txt'
@@ -228,12 +230,4 @@ class RecipeViewSet(ModelViewSet):
                 'short-link': request.build_absolute_uri(
                     reverse('short-link', args=(pk,)))
             })
-        raise ValidationError(RECIPE_NOT_EXIST.format(pk))
-
-
-def recipe_redirect(request, pk):
-    try:
-        Recipe.objects.filter(pk=pk).exists()
-        return redirect(f'/recipes/{pk}/')
-    except Exception:
         raise ValidationError(RECIPE_NOT_EXIST.format(pk))

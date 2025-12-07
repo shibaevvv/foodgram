@@ -80,20 +80,22 @@ class CookingTimeFilter(admin.SimpleListFilter):
         self.min_long_limit = cooking_times[count // 3 * 2]
         self.cooking_time_ranges = {
             'fast': (cooking_times[0], self.max_fast_limit - 1),
-            'middle': (self.max_fast_limit, self.min_long_limit),
-            'long': (self.min_long_limit + 1, cooking_times[-1])
+            'middle': (self.max_fast_limit, self.min_long_limit - 1),
+            'long': (self.min_long_limit, cooking_times[-1])
         }
         return [
-            ('fast', f'< {self.max_fast_limit} мин.'),
-            ('middle', f'{self.max_fast_limit} - {self.min_long_limit} мин.'),
-            ('long', f'> {self.min_long_limit} мин.'),
+            ('fast', f'до {self.max_fast_limit} мин.'),
+            (
+                'middle',
+                f'от {self.max_fast_limit} - до {self.min_long_limit - 1} мин.'
+            ),
+            ('long', f'от {self.min_long_limit} мин.'),
         ]
 
     def queryset(self, requerest, recipes):
-        if (range_name := self.value()):
+        if self.cooking_time_ranges.get(self.value()):
             return recipes.filter(
-                **{f'{self.parameter_name}__range':
-                   self.cooking_time_ranges[range_name]}
+                cooking_time__range=self.cooking_time_ranges[self.value()]
             )
         return recipes
 
