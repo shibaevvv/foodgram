@@ -3,7 +3,8 @@ from datetime import date
 from babel.dates import format_date
 
 SHOPPING_CART_TITLE = (
-    f'Список покупок от {format_date(date.today(), "dd MMMM yyyy", locale="ru")}.'
+    'Список покупок от '
+    f'{format_date(date.today(), "dd MMMM yyyy", locale="ru")}.'
 )
 SHOPPING_CART_RECIPES = '   \u2022 {} (Автор - {})'
 SHOPPING_CART_PRODUCTS = '  {}. {} - {} ({})'
