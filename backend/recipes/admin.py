@@ -12,6 +12,15 @@ User = get_user_model()
 admin.site.empty_value_display = 'Не задано'
 
 
+def titled_filter(title):
+    class Wrapper(admin.FieldListFilter):
+        def __new__(cls, *args, **kwargs):
+            instance = admin.FieldListFilter.create(*args, **kwargs)
+            instance.title = title
+            return instance
+    return Wrapper
+
+
 class RecipesCountMixin:
     """Миксин для определения количества рецептов объекта."""
 
@@ -38,6 +47,13 @@ class BaseListFilter(admin.SimpleListFilter):
             return queryset.filter(**{f'{self.parameter_name}__isnull': True})
 
 
+class InRecipesFilter(BaseListFilter):
+    """Фильтр наличия продукта в рецептах."""
+
+    title = 'Есть в рецептах'
+    parameter_name = 'recipes'
+
+
 class HasRecipesFilter(BaseListFilter):
     """Фильтр наличия рецептов."""
 
@@ -55,7 +71,7 @@ class HasUserSubscriptionsFilter(BaseListFilter):
 class HasAuthorSubscriptionsFilter(BaseListFilter):
     """Фильтр наличия подписчиков."""
 
-    title = title = 'Имеет подписчиков'
+    title = 'Имеет подписчиков'
     parameter_name = 'author_subscriptions'
 
 
@@ -93,7 +109,7 @@ class CookingTimeFilter(admin.SimpleListFilter):
         ]
 
     def queryset(self, requerest, recipes):
-        if self.cooking_time_ranges.get(self.value()):
+        if self.value() in self.cooking_time_ranges:
             return recipes.filter(
                 cooking_time__range=self.cooking_time_ranges[self.value()]
             )
@@ -111,7 +127,6 @@ class UserAdmin(BaseUserAdmin, RecipesCountMixin):
         'full_name',
         'email',
         'avatar_thumbnail',
-        'is_staff',
         *RecipesCountMixin.list_display,
         'user_subscriptions_count',
         'author_subscriptions_count'
@@ -141,7 +156,6 @@ class UserAdmin(BaseUserAdmin, RecipesCountMixin):
 
     @admin.display(description='Подписчиков')
     def author_subscriptions_count(self, user):
-        """Метод для вычисления подписчиков."""
         return user.author_subscriptions.count()
 
 
@@ -164,7 +178,7 @@ class IngredientAdmin(admin.ModelAdmin, RecipesCountMixin):
         *RecipesCountMixin.list_display,
     )
     search_fields = ('name', 'measurement_unit',)
-    list_filter = (HasRecipesFilter, 'measurement_unit',)
+    list_filter = (InRecipesFilter, 'measurement_unit',)
 
 
 class TagsInline(admin.TabularInline):
@@ -197,7 +211,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'favorites_amount',
         'ingredients_list',
         'tags_list',
-        'image_thumbnail'
+        'image_thumbnail',
     )
     list_select_related = ('author',)
     search_fields = (
@@ -207,9 +221,13 @@ class RecipeAdmin(admin.ModelAdmin):
         'tags__name',
         'ingredients__name',
     )
-    list_filter = ('tags__name', 'author__username', CookingTimeFilter,)
+    list_filter = (
+        ('tags__name', titled_filter('Тэги')),
+        ('author__username', titled_filter('Автор')),
+        CookingTimeFilter,
+    )
     inlines = (TagsInline, IngredientInline)
-    readonly_fields = ('favorites_amount', )
+    readonly_fields = ('favorites_amount',)
 
     @admin.display(description='В избранном',)
     def favorites_amount(self, recipe):

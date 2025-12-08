@@ -23,15 +23,15 @@ def get_shopping_cart_text(ingredients, recipes, domain):
             recipe['recipe__author__username'],
         ) for recipe in recipes},
         '',
-        'Понадобятся следующие продукты:'
+        'Понадобятся продукты:'
         '',
         '',
         *[SHOPPING_CART_PRODUCTS.format(
-            count,
+            counter,
             ingredient['ingredient__name'].capitalize(),
             ingredient['sum'],
             ingredient['ingredient__measurement_unit']
-        ) for count, ingredient in enumerate(ingredients, 1)],
+        ) for counter, ingredient in enumerate(ingredients, 1)],
         '',
         '',
         f'Загружено с сайта: {domain}'
