@@ -103,7 +103,7 @@ class CookingTimeFilter(admin.SimpleListFilter):
             ('fast', f'до {self.max_fast_limit} мин.'),
             (
                 'middle',
-                f'от {self.max_fast_limit} - до {self.min_long_limit - 1} мин.'
+                f'от {self.max_fast_limit} - до {self.min_long_limit} мин.'
             ),
             ('long', f'от {self.min_long_limit} мин.'),
         ]
