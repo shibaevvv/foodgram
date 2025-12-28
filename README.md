@@ -126,4 +126,4 @@ echo 'CSRF_TRUSTED_ORIGINS=https://mydomain.net' >> .env
 ## Автор
 
 - [Владимир Шибаев](https://github.com/shibaevvv)
-[![Email Badge](https://img.shields.io/badge/-Email-D14836?style=flat&logo=Gmail&logoColor=white)](mailto:shibaev.vladimir@gmail.com) [![Telegram Badge](https://img.shields.io/badge/-Telegram-blue?style=flat&logo=Telegram&logoColor=white)](https://t.me/markvaaa)
+[![Email Badge](https://img.shields.io/badge/-Email-D14836?style=flat&logo=Gmail&logoColor=white)](mailto:shibaev.vladimir@gmail.com) [![Telegram Badge](https://img.shields.io/badge/-Telegram-blue?style=flat&logo=Telegram&logoColor=white)](https://t.me/shibaevvv)
