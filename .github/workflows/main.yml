@@ -69,6 +69,7 @@ jobs:
   
   deploy:
     name: Deploy app to server
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     needs: 
       - build_backend_and_push_to_docker_hub
