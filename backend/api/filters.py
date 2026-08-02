@@ -1,12 +1,30 @@
 from django_filters import rest_framework as filters
+from django.db.models import Case, IntegerField, Value, When, Q
 
 from recipes.models import Ingredient, Recipe, Tag
 
 
-class IngredientFilter(filters.FilterSet):
-    """Фильтр для Продуктов."""
+class IstartsIcontainsFilter(filters.Filter):
+    def filter(self, qs, value):
+        if value:
+            return (
+                qs.filter(name__icontains=value)
+                .annotate(
+                    is_start=Case(
+                        When(name__istartswith=value, then=Value(0)),
+                        default=Value(1),
+                        output_field=IntegerField(),
+                    )
+                )
+                .order_by("is_start", "name")
+            )
+        return qs
 
-    name = filters.CharFilter(field_name='name', lookup_expr='istartswith')
+
+class IngredientFilter(filters.FilterSet):
+    """Фильтр для продуктов."""
+
+    name = IstartsIcontainsFilter(field_name='name')
 
     class Meta:
         model = Ingredient
